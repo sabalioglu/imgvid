@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Video, CheckCircle, XCircle, Clock, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { Video, Image as ImageIcon, RefreshCw, TestTube } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { VideoCard } from './VideoCard';
+import { testWebhookIntegration } from '../utils/testWebhook';
 import type { VideoRecord } from '../types';
 
 type TabType = 'images' | 'videos';
@@ -12,9 +14,34 @@ export function VideoDashboard() {
   const [videos, setVideos] = useState<VideoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notification, setNotification] = useState('');
 
   useEffect(() => {
-    fetchVideos();
+    if (user) {
+      fetchVideos();
+
+      const channel = supabase
+        .channel('videos-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'videos',
+          },
+          (payload) => {
+            console.log('Video updated:', payload);
+            setNotification('New video ready!');
+            setTimeout(() => setNotification(''), 3000);
+            fetchVideos();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   const fetchVideos = async () => {
@@ -56,47 +83,39 @@ export function VideoDashboard() {
 
       if (videosError) {
         console.error('Error fetching videos:', videosError);
+        setError('Failed to load videos. Please try again.');
         setVideos([]);
       } else {
         setVideos(videosData || []);
+        setError('');
       }
     } catch (err: any) {
       console.error('Error fetching videos:', err);
+      setError('Failed to load videos. Please try again.');
       setVideos([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending_approval':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'completed':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
+  const handleRetry = () => {
+    setLoading(true);
+    setError('');
+    fetchVideos();
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-      case 'completed':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'rejected':
-        return <XCircle className="w-4 h-4" />;
-      case 'pending_approval':
-      case 'processing':
-        return <Clock className="w-4 h-4" />;
-      default:
-        return null;
+  const handleTestWebhook = async () => {
+    if (!user?.email) return;
+
+    setNotification('Sending test webhook...');
+    const result = await testWebhookIntegration(user.email);
+
+    if (result.success) {
+      setNotification(result.message || 'Test video created!');
+      setTimeout(() => setNotification(''), 3000);
+    } else {
+      setNotification('Test failed: ' + result.error);
+      setTimeout(() => setNotification(''), 5000);
     }
   };
 
@@ -111,11 +130,18 @@ export function VideoDashboard() {
     );
   }
 
-  if (error) {
+  if (error && videos.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md">
-          {error}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <p className="text-red-700 mb-4">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -124,11 +150,26 @@ export function VideoDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">My Creations</h1>
-          <p className="text-slate-600">
-            View and manage your AI-generated content
-          </p>
+        {notification && (
+          <div className="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in z-50">
+            {notification}
+          </div>
+        )}
+
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">My Creations</h1>
+            <p className="text-slate-600">
+              View and manage your AI-generated content
+            </p>
+          </div>
+          <button
+            onClick={handleTestWebhook}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium"
+          >
+            <TestTube className="w-4 h-4" />
+            Test Webhook
+          </button>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg mb-6 p-2">
@@ -143,6 +184,11 @@ export function VideoDashboard() {
             >
               <Video className="w-5 h-5" />
               Videos
+              {videos.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
+                  {videos.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('images')}
@@ -167,120 +213,14 @@ export function VideoDashboard() {
               <h2 className="text-xl font-semibold text-slate-900 mb-2">
                 No videos yet
               </h2>
-              <p className="text-slate-600">
+              <p className="text-slate-600 mb-6">
                 Your generated videos will appear here once they're processed
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {videos.map((video) => (
-                <div
-                  key={video.id}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-                >
-                  <div className="aspect-video bg-gradient-to-br from-blue-500 to-blue-600 relative overflow-hidden">
-                    {video.scenes && video.scenes.length > 0 ? (
-                      <img
-                        src={video.scenes[0].image_url}
-                        alt={`${video.product_name} scene`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <Video className="w-16 h-16 text-white opacity-50" />
-                      </div>
-                    )}
-                    <div className="absolute top-3 right-3">
-                      <span
-                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                          video.status
-                        )}`}
-                      >
-                        {getStatusIcon(video.status)}
-                        {video.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                      {video.product_name}
-                    </h3>
-
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">Scenes:</span>
-                        <span className="font-medium text-slate-900">
-                          {video.total_scenes}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">Duration:</span>
-                        <span className="font-medium text-slate-900">
-                          {video.duration}s
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">Created:</span>
-                        <span className="font-medium text-slate-900">
-                          {new Date(video.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {video.status === 'pending_approval' && (
-                      <div className="flex gap-2">
-                        <a
-                          href={video.approve_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 inline-flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Approve
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                        <a
-                          href={video.reject_form_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors text-sm"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          Reject
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    )}
-
-                    {video.final_video_url && (
-                      <a
-                        href={video.final_video_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center text-sm"
-                      >
-                        Watch Video
-                      </a>
-                    )}
-
-                    {video.scenes && video.scenes.length > 1 && (
-                      <div className="mt-4 pt-4 border-t border-slate-200">
-                        <p className="text-xs text-slate-600 mb-2">Scene Previews:</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {video.scenes.slice(0, 3).map((scene: any) => (
-                            <img
-                              key={scene.id}
-                              src={scene.image_url}
-                              alt={`Scene ${scene.scene_number}`}
-                              className="aspect-video rounded object-cover border border-slate-200"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <VideoCard key={video.id} video={video} />
               ))}
             </div>
           )
