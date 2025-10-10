@@ -30,10 +30,7 @@ export function ApprovalPage() {
       setState('loading');
       const { data, error } = await supabase
         .from('videos')
-        .select(`
-          *,
-          scenes (*)
-        `)
+        .select('*')
         .eq('video_id', videoId)
         .single();
 
@@ -45,8 +42,9 @@ export function ApprovalPage() {
         return;
       }
 
+      // Scenes are stored in JSONB column
       if (data.scenes) {
-        data.scenes.sort((a, b) => a.scene_number - b.scene_number);
+        data.scenes.sort((a: any, b: any) => a.sceneNumber - b.sceneNumber);
       }
 
       setVideo(data as VideoRecord);
@@ -63,8 +61,10 @@ export function ApprovalPage() {
 
     try {
       setState('approving');
+      
+      // ✅ DOĞRU URL - /webhook/ kullanıyoruz
       const response = await fetch(
-        `https://n8n.srv1053240.hstgr.cloud/webhook-test/approve/${videoId}`
+        `https://n8n.srv1053240.hstgr.cloud/webhook/approve/${videoId}`
       );
 
       if (!response.ok) {
@@ -103,8 +103,23 @@ export function ApprovalPage() {
       product_showcase: 'bg-green-100 text-green-800',
       call_to_action: 'bg-purple-100 text-purple-800',
       solution_success: 'bg-emerald-100 text-emerald-800',
+      transformation: 'bg-yellow-100 text-yellow-800',
+      solution_trial: 'bg-indigo-100 text-indigo-800',
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getSceneTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      problem_identification: 'Problem',
+      solution_discovery: 'Solution',
+      product_showcase: 'Showcase',
+      call_to_action: 'CTA',
+      solution_success: 'Success',
+      transformation: 'Transform',
+      solution_trial: 'Trial',
+    };
+    return labels[type] || type.replace(/_/g, ' ');
   };
 
   if (state === 'loading') {
@@ -212,28 +227,28 @@ export function ApprovalPage() {
             <h2 className="text-xl font-bold text-slate-900 mb-4">Generated Scenes</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {video.scenes?.map((scene) => (
+              {video.scenes?.map((scene: any) => (
                 <div
-                  key={scene.id}
+                  key={scene.sceneNumber}
                   className="group relative bg-white border-2 border-slate-200 rounded-xl overflow-hidden hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer"
-                  onClick={() => setSelectedScene(scene.scene_number)}
+                  onClick={() => setSelectedScene(scene.sceneNumber)}
                 >
                   <div className="aspect-video relative overflow-hidden">
                     <img
-                      src={scene.image_url}
-                      alt={`Scene ${scene.scene_number}`}
+                      src={scene.sceneImageUrl}
+                      alt={`Scene ${scene.sceneNumber}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                     />
                     <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      Scene {scene.scene_number}
+                      Scene {scene.sceneNumber}
                     </div>
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
                       <button
                         className="bg-white text-slate-900 px-4 py-2 rounded-lg font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(scene.image_url, '_blank');
+                          window.open(scene.sceneImageUrl, '_blank');
                         }}
                       >
                         <Eye className="w-4 h-4" />
@@ -243,8 +258,8 @@ export function ApprovalPage() {
                   </div>
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${getSceneTypeBadge(scene.scene_type)}`}>
-                        {scene.scene_type.replace(/_/g, ' ')}
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${getSceneTypeBadge(scene.sceneType)}`}>
+                        {getSceneTypeLabel(scene.sceneType)}
                       </span>
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                         scene.status === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -252,10 +267,12 @@ export function ApprovalPage() {
                         {scene.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Clock className="w-4 h-4" />
-                      <span>{scene.processing_time}s processing time</span>
-                    </div>
+                    {scene.processingTime && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Clock className="w-4 h-4" />
+                        <span>{scene.processingTime}s processing time</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
