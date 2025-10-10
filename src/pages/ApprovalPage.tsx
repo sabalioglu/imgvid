@@ -61,8 +61,6 @@ export function ApprovalPage() {
 
     try {
       setState('approving');
-      
-      // ✅ DOĞRU URL - /webhook/ kullanıyoruz
       const response = await fetch(
         `https://n8n.srv1053240.hstgr.cloud/webhook/approve/${videoId}`
       );

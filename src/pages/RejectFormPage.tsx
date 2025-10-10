@@ -75,7 +75,7 @@ export function RejectFormPage() {
     try {
       setState('submitting');
       const response = await fetch(
-        `https://n8n.srv1053240.hstgr.cloud/webhook-test/reject-form/${videoId}`,
+        `https://n8n.srv1053240.hstgr.cloud/webhook/reject/${videoId}`,
         {
           method: 'POST',
           headers: {
