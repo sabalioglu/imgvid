@@ -132,7 +132,7 @@ function App() {
   const [showCurl, setShowCurl] = useState(false);
   const [savedDataAvailable, setSavedDataAvailable] = useState(false);
   const [scene0Data, setScene0Data] = useState<Scene0Data | null>(null);
-  const [currentView, setCurrentView] = useState<"form" | "approval" | "dashboard">("form");
+  const [currentView, setCurrentView] = useState<"form" | "approval" | "dashboard" | "success">("form");
   const [pollingProgress, setPollingProgress] = useState(0);
   const [pollingStep, setPollingStep] = useState("");
 
@@ -255,67 +255,8 @@ function App() {
       const data = await res.json();
       setResponse({ success: true, data, status: res.status });
 
-      const videoId = data.videoId || data.requestId;
-
-      if (!videoId) {
-        throw new Error("No videoId received from webhook");
-      }
-
-      console.log("✅ Received videoId:", videoId);
-      setPollingProgress(0);
-      setPollingStep("Starting generation...");
-
-      const cleanup = startPolling(videoId, {
-        onProgress: (progress, step) => {
-          setPollingProgress(progress);
-          setPollingStep(step);
-        },
-        onComplete: (airtableData) => {
-          console.log("✅ Polling complete:", airtableData);
-
-          const scene0DataFormatted: Scene0Data = {
-            requestId: videoId,
-            productName: airtableData.productName,
-            scene0: {
-              imageUrl: airtableData.sceneImageUrl,
-              resumeUrl: data.scene0?.resumeUrl || "",
-              sceneNumber: 0,
-              processingTime: airtableData.processingTime,
-            },
-            character: data.character || {
-              gender: "Unknown",
-              age: 0,
-              ethnicity: "Unknown",
-              description: "Character information not available",
-            },
-            approval: data.approval || {
-              required: true,
-              question: "Does this Scene 0 look good?",
-              options: ["Approve & Continue", "Regenerate Scene 0"],
-            },
-            progress: data.progress || {
-              completed: 1,
-              total: 3,
-              percentage: 33,
-            },
-          };
-
-          setScene0Data(scene0DataFormatted);
-          setCurrentView("approval");
-          setIsSubmitting(false);
-        },
-        onError: (error) => {
-          console.error("❌ Polling error:", error);
-          setResponse({
-            success: false,
-            error: error,
-            details: error,
-          });
-          setIsSubmitting(false);
-        },
-      });
-
-      return () => cleanup();
+      setCurrentView("success");
+      setIsSubmitting(false);
     } catch (error: any) {
       setResponse({
         success: false,
@@ -349,6 +290,58 @@ function App() {
         onApprovalSuccess={handleApprovalSuccess}
         onRegenerateSuccess={handleRegenerateSuccess}
       />
+    );
+  }
+
+  if (currentView === "success") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-6">
+        <div className="max-w-2xl w-full">
+          <div className="bg-white rounded-2xl shadow-xl border border-green-200 p-8 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
+              <CheckCircle2 className="w-12 h-12 text-green-600" />
+            </div>
+
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Thank You for Using Our Service!
+            </h1>
+
+            <p className="text-lg text-gray-700 mb-6">
+              Your video generation request has been submitted successfully.
+            </p>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+              <p className="text-gray-800">
+                We're now processing your video. Once your images are generated, we'll send you an email notification so you can review and download them.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setCurrentView("dashboard");
+                  setResponse(null);
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
+              >
+                <Video className="w-5 h-5" />
+                View My Creations
+              </button>
+
+              <button
+                onClick={() => {
+                  setCurrentView("form");
+                  setResponse(null);
+                  clearAll();
+                }}
+                className="w-full px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-lg font-medium"
+              >
+                Create Another Video
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
