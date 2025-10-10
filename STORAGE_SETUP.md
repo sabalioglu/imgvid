@@ -1,5 +1,18 @@
 # Supabase Storage Setup Guide
 
+## ⚠️ ÖNEMLİ: n8n'de HTTP Request Kullanın!
+
+**Edge Function URL**: `https://zybagsuniyidctaxmqbt.supabase.co/functions/v1/video-complete`
+
+### n8n HTTP Request Node Ayarları:
+- **Method**: POST
+- **URL**: `https://zybagsuniyidctaxmqbt.supabase.co/functions/v1/video-complete`
+- **Authentication**: Generic Credential Type
+  - **Header Auth Name**: `Authorization`
+  - **Header Auth Value**: `Bearer f3f2ede038f58d01af71d8715ed89328058fa76774e04d9baf36da9bc3cc7999`
+- **Body Content Type**: JSON
+- **Specify Body**: Using JSON
+
 ## 1. Supabase Dashboard'da Storage Bucket Oluşturma
 
 1. Supabase Dashboard'a gidin: https://supabase.com/dashboard
@@ -49,10 +62,10 @@ CREATE POLICY "Authenticated users can upload scenes"
   );
 ```
 
-## 3. n8n Webhook'unuzdan Kullanım
+## 3. n8n HTTP Request ile Kullanım
 
 ### Seçenek A: Direkt URL Gönderme (Mevcut Yöntem)
-n8n'den görsellerin URL'lerini doğrudan gönderin:
+n8n HTTP Request node'undan görsellerin URL'lerini doğrudan gönderin:
 
 ```json
 {
@@ -105,7 +118,7 @@ Görselleri otomatik olarak Supabase Storage'a upload etmek için `uploadToStora
 ```
 
 Bu durumda:
-1. Webhook, external URL'den görseli indirir
+1. Edge Function, external URL'den görseli indirir
 2. Supabase Storage'a upload eder
 3. Yeni Supabase URL'ini veritabanına kaydeder
 4. Dashboard bu URL'den görselleri gösterir
@@ -155,15 +168,15 @@ if (result.success) {
 ### External URL Kullanmanın Avantajları:
 - ✅ Daha basit entegrasyon
 - ✅ Bandwidth tasarrufu (Supabase'de)
-- ✅ Hızlı webhook yanıtı (upload beklemez)
+- ✅ Hızlı HTTP yanıtı (upload beklemez)
 
 ## Test Etme
 
-Webhook'u test etmek için:
+### cURL ile Test:
 
 ```bash
-curl -X POST "https://[PROJECT_ID].supabase.co/functions/v1/video-complete" \
-  -H "Authorization: Bearer YOUR_WEBHOOK_SECRET" \
+curl -X POST "https://zybagsuniyidctaxmqbt.supabase.co/functions/v1/video-complete" \
+  -H "Authorization: Bearer f3f2ede038f58d01af71d8715ed89328058fa76774e04d9baf36da9bc3cc7999" \
   -H "Content-Type: application/json" \
   -d '{
     "videoId": "test_123",
@@ -186,4 +199,13 @@ curl -X POST "https://[PROJECT_ID].supabase.co/functions/v1/video-complete" \
     "rejectFormUrl": "https://n8n.srv1053240.hstgr.cloud/webhook/reject-form/test_123",
     "createdAt": "2025-01-10T10:00:00Z"
   }'
+```
+
+### n8n'de Test:
+
+1. **HTTP Request** node ekleyin
+2. Yukarıdaki ayarları yapın
+3. JSON body'yi yapıştırın
+4. Execute workflow yapın
+5. Dashboard'da görselleri kontrol edin
 ```
