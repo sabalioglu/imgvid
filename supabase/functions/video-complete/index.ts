@@ -24,6 +24,7 @@ interface WebhookPayload {
   approveUrl: string;
   rejectFormUrl: string;
   createdAt: string;
+  uploadToStorage?: boolean;
 }
 
 Deno.serve(async (req: Request) => {
@@ -143,9 +144,59 @@ Deno.serve(async (req: Request) => {
       status: scene.status,
     }));
 
+    let finalSceneRecords = sceneRecords;
+
+    if (payload.uploadToStorage) {
+      const uploadedScenes = await Promise.all(
+        scenes.map(async (scene) => {
+          try {
+            const response = await fetch(scene.imageUrl);
+            if (!response.ok) {
+              console.error(`Failed to fetch image: ${scene.imageUrl}`);
+              return sceneRecords.find(s => s.scene_number === scene.sceneNumber)!;
+            }
+
+            const blob = await response.blob();
+            const fileExt = scene.imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
+            const fileName = `${videoId}/scene-${scene.sceneNumber}.${fileExt}`;
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('video-scenes')
+              .upload(fileName, blob, {
+                cacheControl: '3600',
+                upsert: true,
+                contentType: response.headers.get('content-type') || 'image/jpeg',
+              });
+
+            if (uploadError) {
+              console.error(`Upload error for scene ${scene.sceneNumber}:`, uploadError);
+              return sceneRecords.find(s => s.scene_number === scene.sceneNumber)!;
+            }
+
+            const { data: urlData } = supabase.storage
+              .from('video-scenes')
+              .getPublicUrl(fileName);
+
+            return {
+              video_id: videoId,
+              scene_number: scene.sceneNumber,
+              scene_type: scene.sceneType,
+              image_url: urlData.publicUrl,
+              processing_time: scene.processingTime,
+              status: scene.status,
+            };
+          } catch (error) {
+            console.error(`Error processing scene ${scene.sceneNumber}:`, error);
+            return sceneRecords.find(s => s.scene_number === scene.sceneNumber)!;
+          }
+        })
+      );
+      finalSceneRecords = uploadedScenes;
+    }
+
     const scenesResult = await supabase
       .from("scenes")
-      .insert(sceneRecords);
+      .insert(finalSceneRecords);
 
     if (scenesResult.error) {
       throw new Error(`Failed to create scenes: ${scenesResult.error.message}`);
