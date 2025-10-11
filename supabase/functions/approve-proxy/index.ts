@@ -38,10 +38,10 @@ Deno.serve(async (req: Request) => {
     let body = null;
 
     if (action === 'approve') {
-      targetUrl = `https://n8n.srv1053240.hstgr.cloud/webhook/approve/${videoId}`;
+      targetUrl = `https://n8n.srv1053240.hstgr.cloud/webhook/approve-video-generation/approve/${videoId}`;
       method = 'GET';
     } else if (action === 'reject') {
-      targetUrl = `https://n8n.srv1053240.hstgr.cloud/webhook/reject/${videoId}`;
+      targetUrl = `https://n8n.srv1053240.hstgr.cloud/webhook/reject-video-generation/reject/${videoId}`;
       method = 'POST';
 
       if (req.method === 'POST') {
