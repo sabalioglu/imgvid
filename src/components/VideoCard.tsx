@@ -1,3 +1,5 @@
+// src/components/VideoCard.tsx
+
 import { CheckCircle, XCircle, Clock, ExternalLink, Download, Eye } from 'lucide-react';
 import type { VideoRecord } from '../types';
 
@@ -47,12 +49,15 @@ export function VideoCard({ video }: VideoCardProps) {
     });
   };
 
+  // ✅ JSONB scenes'den gelen field names
+  const scenes = video.scenes || [];
+
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
       <div className="aspect-video bg-gradient-to-br from-blue-500 to-blue-600 relative overflow-hidden">
-        {video.scenes && video.scenes.length > 0 ? (
+        {scenes.length > 0 ? (
           <img
-            src={video.scenes[0].image_url}
+            src={scenes[0].sceneImageUrl}
             alt={`${video.product_name} scene`}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -155,20 +160,20 @@ export function VideoCard({ video }: VideoCardProps) {
           </div>
         )}
 
-        {video.scenes && video.scenes.length > 1 && (
+        {scenes.length > 1 && (
           <div className="pt-4 border-t border-slate-200">
             <p className="text-xs text-slate-600 mb-2 font-medium">Scene Previews:</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {video.scenes.map((scene) => (
-                <div key={scene.id} className="relative">
+              {scenes.map((scene: any) => (
+                <div key={scene.sceneNumber} className="relative">
                   <img
-                    src={scene.image_url}
-                    alt={`Scene ${scene.scene_number}`}
+                    src={scene.sceneImageUrl}
+                    alt={`Scene ${scene.sceneNumber}`}
                     className="aspect-video rounded object-cover border border-slate-200"
                     loading="lazy"
                   />
                   <div className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded">
-                    {scene.scene_number}
+                    {scene.sceneNumber}
                   </div>
                 </div>
               ))}
