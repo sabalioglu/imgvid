@@ -46,19 +46,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    const webhookSecret = Deno.env.get("N8N_WEBHOOK_SECRET");
-
-    if (!authHeader || authHeader !== `Bearer ${webhookSecret}`) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     const payload: WebhookPayload = await req.json();
     const {
       videoId,
