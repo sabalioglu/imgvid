@@ -67,6 +67,7 @@ export function RejectFormPage() {
     );
   };
 
+  // =============== DEĞİŞİKLİK BAŞLANGICI ===============
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -74,8 +75,10 @@ export function RejectFormPage() {
 
     try {
       setState('submitting');
+      // ÖNEMLİ: Bu URL'i kendi n8n'deki "reject" workflow'unuzun webhook URL'i ile değiştirin.
+      // Genellikle "approve" workflow'una benzer bir yapıda olacaktır.
       const response = await fetch(
-        `https://n8n.srv1053240.hstgr.cloud/webhook/reject/${videoId}`,
+        `https://n8n.srv1053240.hstgr.cloud/webhook/reject-video-generation/reject/${videoId}`,
         {
           method: 'POST',
           headers: {
@@ -103,6 +106,7 @@ export function RejectFormPage() {
       setState('error');
     }
   };
+  // =============== DEĞİŞİKLİK SONU ===============
 
   if (state === 'loading') {
     return (
