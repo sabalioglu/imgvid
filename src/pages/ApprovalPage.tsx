@@ -42,7 +42,6 @@ export function ApprovalPage() {
         return;
       }
 
-      // Scenes are stored in JSONB column
       if (data.scenes) {
         data.scenes.sort((a: any, b: any) => a.sceneNumber - b.sceneNumber);
       }
@@ -56,29 +55,35 @@ export function ApprovalPage() {
     }
   };
 
+  // =============== DEĞİŞİKLİK BAŞLANGICI ===============
   const handleApprove = async () => {
     if (!videoId) return;
 
     try {
       setState('approving');
+      // URL, n8n'deki doğru webhook path'i ile güncellendi.
       const response = await fetch(
-        `https://n8n.srv1053240.hstgr.cloud/webhook/approve/${videoId}`
+        `https://n8n.srv1053240.hstgr.cloud/webhook/approve-video-generation/approve/${videoId}`
       );
 
       if (!response.ok) {
-        throw new Error('Failed to approve video');
+        const errorText = await response.text();
+        console.error("n8n Webhook Error:", errorText);
+        throw new Error('Approval request failed. The server responded with an error.');
       }
 
       setState('success');
+      // Kullanıcının başarı mesajını görmesi için yönlendirme 3 saniye sonra yapılıyor.
       setTimeout(() => {
         navigate('/');
       }, 3000);
     } catch (err) {
-      console.error('Error approving video:', err);
+      console.error('Error during approval:', err);
       setError(err instanceof Error ? err.message : 'Failed to approve video');
       setState('error');
     }
   };
+  // =============== DEĞİŞİKLİK SONU ===============
 
   const handleReject = () => {
     navigate(`/reject-form/${videoId}`);
