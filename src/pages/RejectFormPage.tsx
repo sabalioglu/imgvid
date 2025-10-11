@@ -67,17 +67,19 @@ export function RejectFormPage() {
     );
   };
 
-  // =============== DEĞİŞİKLİK BAŞLANGICI ===============
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!videoId || selectedScenes.length === 0) return;
+    if (!videoId || selectedScenes.length === 0) {
+      alert('Please select at least one scene!');
+      return;
+    }
 
     try {
       setState('submitting');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/approve-proxy/reject/${videoId}`,
+        `https://n8n.srv1053240.hstgr.cloud/webhook/approve-video-generation/reject/${videoId}`,
         {
           method: 'POST',
           headers: {
@@ -95,17 +97,27 @@ export function RejectFormPage() {
         throw new Error('Failed to submit regeneration request');
       }
 
-      setState('success');
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
+      const result = await response.json();
+
+      if (result.success) {
+        await supabase
+          .from('videos')
+          .update({ status: 'regenerating' })
+          .eq('video_id', videoId);
+
+        setState('success');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 3000);
+      } else {
+        throw new Error(result.message || 'Submission failed');
+      }
     } catch (err) {
       console.error('Error submitting form:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit request');
       setState('error');
     }
   };
-  // =============== DEĞİŞİKLİK SONU ===============
 
   if (state === 'loading') {
     return (

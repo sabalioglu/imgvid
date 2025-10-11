@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Video,
   Loader2,
@@ -16,7 +17,6 @@ import { FileUpload } from "./components/FileUpload";
 import { FormField, Input, Textarea, Select } from "./components/FormField";
 import { Scene0Approval } from "./components/Scene0Approval";
 import { Auth } from "./components/Auth";
-import { VideoDashboard } from "./components/VideoDashboard";
 import { useAuth } from "./contexts/AuthContext";
 import {
   validateForm,
@@ -108,6 +108,7 @@ const SHOWCASE_STYLES = [
 ];
 
 function App() {
+  const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const [environment, setEnvironment] = useState<Environment>("demo");
   const [formData, setFormData] = useState<VideoFormData>({
@@ -280,7 +281,8 @@ function App() {
   };
 
   if (currentView === "dashboard") {
-    return <VideoDashboard />;
+    navigate('/dashboard');
+    return null;
   }
 
   if (currentView === "approval" && scene0Data) {

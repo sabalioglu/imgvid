@@ -76,19 +76,39 @@ export function ApprovalPage() {
 
     try {
       setState('approving');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/approve-proxy/approve/${videoId}`
+        `https://n8n.srv1053240.hstgr.cloud/webhook/approve-video-generation/approve/${videoId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
 
       if (!response.ok) {
         throw new Error('Failed to approve video');
       }
 
-      setState('success');
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
+      const result = await response.json();
+
+      if (result.success) {
+        await supabase
+          .from('videos')
+          .update({
+            status: 'approved',
+            approved_at: new Date().toISOString()
+          })
+          .eq('video_id', videoId);
+
+        setState('success');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 3000);
+      } else {
+        throw new Error(result.message || 'Approval failed');
+      }
     } catch (err) {
       console.error('Error approving video:', err);
       setError(err instanceof Error ? err.message : 'Failed to approve video');

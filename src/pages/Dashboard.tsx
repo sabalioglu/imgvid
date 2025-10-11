@@ -1,16 +1,14 @@
-// src/components/VideoDashboard.tsx
-
 import { useEffect, useState } from 'react';
 import { Video, Image as ImageIcon, RefreshCw, TestTube } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { VideoCard } from './VideoCard';
+import { VideoCard } from '../components/VideoCard';
 import { testWebhookIntegration } from '../utils/testWebhook';
 import type { VideoRecord } from '../types';
 
 type TabType = 'images' | 'videos';
 
-export function VideoDashboard() {
+export function Dashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('videos');
   const [videos, setVideos] = useState<VideoRecord[]>([]);

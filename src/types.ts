@@ -165,10 +165,11 @@ export interface VideoRecord {
   id: string;
   video_id: string;
   user_id: string;
+  user_email: string;
   product_name: string;
   total_scenes: number;
   duration: number;
-  status: 'pending_approval' | 'approved' | 'rejected' | 'processing' | 'completed';
+  status: 'pending_approval' | 'approved' | 'regenerating' | 'completed';
   approve_url: string;
   reject_form_url: string;
   final_video_url?: string;
