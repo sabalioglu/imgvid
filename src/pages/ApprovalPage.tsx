@@ -29,7 +29,6 @@ export function ApprovalPage() {
     try {
       setState('loading');
   
-      // ✅ maybeSingle() kullan - daha güvenli
       const { data, error } = await supabase
         .from('videos')
         .select(`
@@ -50,7 +49,6 @@ export function ApprovalPage() {
         return;
       }
   
-      // Sahneleri numaralarına göre sırala
       if (data.scenes) {
         data.scenes.sort((a: any, b: any) => a.scene_number - b.scene_number);
       }
@@ -73,13 +71,14 @@ export function ApprovalPage() {
 
       console.log('🚀 Approving video:', videoId);
 
-      // ✅ DOĞRU URL - Supabase Edge Function üzerinden
+      // ✅ Supabase Edge Function ile N8N'e istek at
       const response = await fetch(
         `https://zybagsuniyidctaxmqbt.supabase.co/functions/v1/approve-proxy/approve/${videoId}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-proxy-secret': 'Smh8644988!.' // ✅ SECRET HEADER
           },
         }
       );
@@ -96,7 +95,6 @@ export function ApprovalPage() {
       console.log('✅ Approval result:', result);
 
       if (result.success) {
-        // ✅ N8N zaten Supabase'i güncelliyor, burada tekrar güncellemeye gerek yok
         setState('success');
         setTimeout(() => {
           navigate('/dashboard');
