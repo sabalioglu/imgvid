@@ -75,10 +75,9 @@ export function RejectFormPage() {
 
     try {
       setState('submitting');
-      // ÖNEMLİ: Bu URL'i kendi n8n'deki "reject" workflow'unuzun webhook URL'i ile değiştirin.
-      // Genellikle "approve" workflow'una benzer bir yapıda olacaktır.
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(
-        `https://n8n.srv1053240.hstgr.cloud/webhook/reject-video-generation/reject/${videoId}`,
+        `${supabaseUrl}/functions/v1/approve-proxy/reject/${videoId}`,
         {
           method: 'POST',
           headers: {

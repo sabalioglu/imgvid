@@ -76,8 +76,9 @@ export function ApprovalPage() {
 
     try {
       setState('approving');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(
-        `https://n8n.srv1053240.hstgr.cloud/webhook/approve-video-generation/approve/${videoId}`
+        `${supabaseUrl}/functions/v1/approve-proxy/approve/${videoId}`
       );
 
       if (!response.ok) {
