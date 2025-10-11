@@ -23,26 +23,23 @@ export function ApprovalPage() {
     fetchVideoData();
   }, [videoId]);
 
-  // =============== DEĞİŞİKLİK BAŞLANGICI ===============
   const fetchVideoData = async () => {
     if (!videoId) return;
   
     try {
       setState('loading');
   
-      // Sorgu yöntemi daha güvenli bir hale getirildi (.match kullanarak)
-      // ve sahneler de sorguya dahil edildi.
+      // ✅ maybeSingle() kullan - daha güvenli
       const { data, error } = await supabase
         .from('videos')
         .select(`
           *,
           scenes (*)
         `)
-        .match({ video_id: videoId })
-        .single();
+        .eq('video_id', videoId)
+        .maybeSingle();
   
       if (error) {
-        // Hata varsa konsola detaylı yazdır
         console.error('Supabase fetch error:', error);
         throw error;
       }
@@ -55,21 +52,18 @@ export function ApprovalPage() {
   
       // Sahneleri numaralarına göre sırala
       if (data.scenes) {
-        data.scenes.sort((a, b) => a.scene_number - b.scene_number);
+        data.scenes.sort((a: any, b: any) => a.scene_number - b.scene_number);
       }
   
       setVideo(data as VideoRecord);
       setState('loaded');
     } catch (err: any) {
       console.error('Error fetching video data:', err);
-      // Hata mesajını daha anlaşılır yap
       const errorMessage = err.message || 'An unknown error occurred while fetching video data.';
       setError(`Failed to load video: ${errorMessage}`);
       setState('error');
     }
   };
-  // =============== DEĞİŞİKLİK SONU ===============
-
 
   const handleApprove = async () => {
     if (!videoId) return;
@@ -77,8 +71,11 @@ export function ApprovalPage() {
     try {
       setState('approving');
 
+      console.log('🚀 Approving video:', videoId);
+
+      // ✅ DOĞRU URL - Supabase Edge Function üzerinden
       const response = await fetch(
-        `https://n8n.srv1053240.hstgr.cloud/webhook/approve-video-generation/approve/${videoId}`,
+        `https://zybagsuniyidctaxmqbt.supabase.co/functions/v1/approve-proxy/approve/${videoId}`,
         {
           method: 'POST',
           headers: {
@@ -87,21 +84,19 @@ export function ApprovalPage() {
         }
       );
 
+      console.log('📨 Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to approve video');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Response error:', errorData);
+        throw new Error(errorData.error || 'Failed to approve video');
       }
 
       const result = await response.json();
+      console.log('✅ Approval result:', result);
 
       if (result.success) {
-        await supabase
-          .from('videos')
-          .update({
-            status: 'approved',
-            approved_at: new Date().toISOString()
-          })
-          .eq('video_id', videoId);
-
+        // ✅ N8N zaten Supabase'i güncelliyor, burada tekrar güncellemeye gerek yok
         setState('success');
         setTimeout(() => {
           navigate('/dashboard');
@@ -110,7 +105,7 @@ export function ApprovalPage() {
         throw new Error(result.message || 'Approval failed');
       }
     } catch (err) {
-      console.error('Error approving video:', err);
+      console.error('❌ Error approving video:', err);
       setError(err instanceof Error ? err.message : 'Failed to approve video');
       setState('error');
     }
@@ -175,7 +170,7 @@ export function ApprovalPage() {
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Error</h2>
           <p className="text-slate-600 mb-6">{error || 'Video not found'}</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
             Go to Dashboard
@@ -263,13 +258,13 @@ export function ApprovalPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {video.scenes?.map((scene: any) => (
                 <div
-                  key={scene.scene_number} // scene.id yerine scene.scene_number kullanmak daha güvenli olabilir
+                  key={scene.scene_number}
                   className="group relative bg-white border-2 border-slate-200 rounded-xl overflow-hidden hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer"
                   onClick={() => setSelectedScene(scene.scene_number)}
                 >
                   <div className="aspect-video relative overflow-hidden">
                     <img
-                      src={scene.image_url} // Veritabanındaki sütun adı image_url
+                      src={scene.image_url}
                       alt={`Scene ${scene.scene_number}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
