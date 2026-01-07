@@ -34,8 +34,8 @@ import { getSampleFormData, generateCurlCommand } from "./utils/sampleData";
 import { startPolling } from "./utils/airtablePolling";
 
 const WEBHOOK_URLS = {
-  demo: "https://n8n.tsagroupllc.com/webhook-test/vidgen",
-  production: "https://n8n.tsagroupllc.com/webhook/vidgen",
+  demo: "https://n8n.tsagroupllc.com/webhook-test/ugc-video-gen",
+  production: "https://n8n.tsagroupllc.com/webhook/ugc-video-gen",
 };
 
 const AD_TYPES = [
